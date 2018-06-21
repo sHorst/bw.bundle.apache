@@ -155,7 +155,7 @@ def add_check_mk_test(metadata):
             for port, protocoll in ports.items():
                 tag = get_tag_from_port(port, protocoll)
 
-                if tag not in used_tags:
+                if [tag, ] not in used_tags:
                     if protocoll == 'http':
                         config = (u'Webserver', {'virthost': ('$HOSTNAME$', False)})
                         description = 'HTTP Server'
