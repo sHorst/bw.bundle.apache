@@ -17,7 +17,21 @@ def get_tag_from_port(port, protocoll):
         return 'https'
     else:
         return '{}_{}'.format(protocoll, port)
-        
+
+
+@metadata_processor
+def default_vhost_document_root(metadata):
+    for vhost_name, vhost in metadata.get('apache', {}).get('vhosts', {}).items():
+        metadata['apache']['vhosts'][vhost_name].setdefault('private_root', '/var/www/{}'.format(vhost_name))
+        metadata['apache']['vhosts'][vhost_name].setdefault('public_root', '/var/www/{}/htdocs'.format(vhost_name))
+
+        if 'suexec' in vhost:
+            old_document_root = vhost.get('document_root', '/var/www/{}'.format(vhost['suexec']['user']))
+            metadata['apache']['vhosts'][vhost_name]['public_root'] = "{}/web/htdocs/public_html".format(old_document_root)
+            metadata['apache']['vhosts'][vhost_name]['private_root'] = "{}/web/htdocs".format(old_document_root)
+
+    return metadata, DONE
+
 
 @metadata_processor
 def add_iptables_rules(metadata):

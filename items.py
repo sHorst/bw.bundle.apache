@@ -161,9 +161,7 @@ if 'apache' in node.metadata:
                 ],
             }
 
-    for vhost_name in node.metadata['apache'].get('vhosts', {}):
-        vhost = node.metadata['apache']['vhosts'][vhost_name]
-
+    for vhost_name, vhost in node.metadata['apache'].get('vhosts', {}).items():
         # TODO: set ports also in apache config otherwise apache does not listen on those ports
         protocols = {'http': vhost.get('ports', {}).get('http', [80])}
         if vhost.get('ssl', False):
