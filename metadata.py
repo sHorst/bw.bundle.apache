@@ -99,13 +99,14 @@ def add_dehydrated_domains(metadata):
 def add_yubikey_default_config(metadata):
     if 'authn_yubikey' in metadata.get('apache', {}).get('modules', {}):
         authn_yubikey_config = metadata['apache']['modules']['authn_yubikey']
-        for vhost_name in metadata.get('apache', {}).get('vhosts', {}).keys():
+        for vhost_name, vhost_config in metadata.get('apache', {}).get('vhosts', {}).items():
             metadata['apache']['vhosts'][vhost_name].setdefault('additional_config', {})
             metadata['apache']['vhosts'][vhost_name]['additional_config']['_authz_yubikey'] = [
                 "<Directory />",
                 '  AuthYubiKeyTimeout {}'.format(authn_yubikey_config.get('AuthYubiKeyTimeout', 3600)),
                 '  AuthYubiKeyRequireSecure {}'.format(
-                    'On' if authn_yubikey_config.get('AuthYubiKeyRequireSecure', True) else 'Off'
+                    'On' if authn_yubikey_config.get('AuthYubiKeyRequireSecure', True)
+                            and vhost_config.get('ssl', False) else 'Off'
                 ),
                 '  AuthYubiKeyExternalErrorPage {}'.format(
                     'On' if authn_yubikey_config.get('AuthYubiKeyExternalErrorPage', False) else 'Off'
