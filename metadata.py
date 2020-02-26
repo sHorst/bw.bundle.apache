@@ -129,14 +129,26 @@ def add_yubikey_default_config(metadata):
 def add_check_mk_tags(metadata):
     if node.has_bundle('check_mk_agent'):
         metadata.setdefault('check_mk', {})
-        metadata['check_mk'].setdefault('tags', [])
+        metadata['check_mk'].setdefault('tags', {})
 
+        tags = []
         ports = get_used_ports(metadata)
         for port, protocoll in ports.items():
             tag = get_tag_from_port(port, protocoll)
 
-            if tag not in metadata['check_mk']['tags']:
-                metadata['check_mk']['tags'] += [tag, ]
+            if tag not in tags:
+                tags += [tag, ]
+
+        for tag in tags:
+            metadata['check_mk']['tags'].setdefault(tag, tag)
+
+        # set correct web attribute it does only knows standart http/s ports
+        if 'http' in tags and 'https' in tags:
+            metadata['check_mk']['tags']['web'] = 'httpPlus'
+        elif 'http' in tags:
+            metadata['check_mk']['tags']['web'] = '_http'
+        else:
+            metadata['check_mk']['tags']['web'] = '_https'
 
     return metadata, DONE
 
@@ -164,23 +176,30 @@ def add_check_mk_test(metadata):
                 setdefault('http', [])
 
             used_tags = [
-                x[1] for x in check_mk_server.partial_metadata['check_mk']['global_rules']['active_checks']['http']
+                # TODO: this is not working to full extend
+                list(x.get('condition', {}).get('host_tags', {}).keys()) for x in check_mk_server.partial_metadata['check_mk']['global_rules']['active_checks']['http']
             ]
 
             for port, protocoll in ports.items():
                 tag = get_tag_from_port(port, protocoll)
 
                 if [tag, ] not in used_tags:
+                    condition = {'host_tags': {tag: tag}}
+
                     if protocoll == 'http':
                         config = (u'Webserver', {'virthost': ('$HOSTNAME$', False)})
                         description = 'HTTP Server'
                         if port != 80:
+                            # tag = 'http{port}'.format(port=port)
                             # TODO: add port to config
-                            config = (u'Webserver', {'virthost': ('$HOSTNAME$', False)})
-                            description = 'HTTP Server on Port {}'.format(port)
+                            description += ' on Port {}'.format(port)
 
                         check_mk_server.partial_metadata['check_mk']['global_rules']['active_checks']['http'] += [
-                            (config, [tag, ], 'ALL_HOSTS', {'description': description}),
+                            {
+                                'condition': condition,
+                                'options': {'description': description},
+                                'value': config,
+                            },
                         ]
                     elif protocoll == 'https':
                         # TODO: add all vhosts to config
@@ -193,20 +212,22 @@ def add_check_mk_test(metadata):
                         description = 'Secure HTTP Server'
                         if port != 443:
                             # TODO: add port to config
-                            config = ('Secure Web Server', {
-                                'ssl': 'auto',
-                                'virthost': ('$HOSTNAME$', False),
-                                'sni': True
-                            })
-                            cert_config = (u'cert Age', {'cert_days': (15, 5), 'sni': True})
-                            description = 'Secure HTTP Server on Port {}'.format(port)
+                            description += ' on Port {}'.format(port)
 
                         check_mk_server.partial_metadata['check_mk']['global_rules']['active_checks']['http'] += [
-                            (config, [tag, ], 'ALL_HOSTS', {'description': description}),
+                            {
+                                'condition': condition,
+                                'options': {'description': description},
+                                'value': config,
+                            },
                         ]
 
                         check_mk_server.partial_metadata['check_mk']['global_rules']['active_checks']['http'] += [
-                            (cert_config, [tag, ], 'ALL_HOSTS', {'description': "Certificate Age for {}".format(description)}),
+                            {
+                                'condition': condition,
+                                'options': {'description': "Certificate Age for {}".format(description)},
+                                'value': cert_config,
+                            },
                         ]
 
             # generate global host tags for ssh
