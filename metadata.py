@@ -20,10 +20,26 @@ def get_tag_from_port(port, protocoll):
 
 
 @metadata_processor
+def default_vhost_for_redirects(metadata):
+    for redirect_from, redirect_to in metadata.get('apache', {}).get('url_redirects', {}).items():
+        metadata['apache']['vhosts'][redirect_from] = \
+            {
+                'enabled': True,
+                'ssl': True,
+                'permanent_redirects': {
+                    '/.well-known/acme-challenge': 'https://www.scoutnet.de/.well-known/acme-challenge',
+                    '/': redirect_to,
+                }
+            }
+
+    return metadata, DONE
+
+
+@metadata_processor
 def default_vhost_document_root(metadata):
     for vhost_name, vhost in metadata.get('apache', {}).get('vhosts', {}).items():
         metadata['apache']['vhosts'][vhost_name].setdefault('private_root', '/var/www/{}'.format(vhost_name))
-        metadata['apache']['vhosts'][vhost_name].setdefault('public_root', '/var/www/{}/htdocs'.format(vhost_name))
+        metadata['apache']['vhosts'][vhost_name].setdefault('public_root', '/var/www/{}/{}'.format(vhost_name, vhost.get('htdocs', 'htdocs')))
 
         if 'suexec' in vhost:
             old_document_root = vhost.get('document_root', '/var/www/{}'.format(vhost['suexec']['user']))
