@@ -225,6 +225,12 @@ if 'apache' in node.metadata:
         additional_configs = []
 
         for additional_config_name, additional_config in sorted(
+                node.metadata['apache'].get('generic_additional_config', {}).items(),
+                key=lambda x: x[0]
+        ):
+            additional_configs += additional_config
+
+        for additional_config_name, additional_config in sorted(
                 vhost.get('additional_config', {}).items(),
                 key=lambda x: x[0]
         ):
