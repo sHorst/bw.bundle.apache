@@ -34,6 +34,27 @@ def get_tag_from_port(port, protocoll):
 
 
 @metadata_reactor
+def default_vhost_for_redirects(metadata):
+    vhosts = {}
+    for redirect_from, redirect_to in metadata.get('apache/url_redirects', {}).items():
+        vhosts[redirect_from] = \
+            {
+                'enabled': True,
+                'ssl': True,
+                'permanent_redirects': {
+                    '/.well-known/acme-challenge': 'https://www.scoutnet.de/.well-known/acme-challenge',
+                    '/': redirect_to,
+                }
+            }
+
+    return {
+        'apache': {
+            'vhosts': vhosts,
+        }
+    }
+
+
+@metadata_reactor
 def default_vhost_document_root(metadata):
     vhosts = {}
     for vhost_name, vhost in metadata.get('apache/vhosts', {}).items():
