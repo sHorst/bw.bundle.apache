@@ -62,7 +62,7 @@ def default_vhost_document_root(metadata):
         if not metadata.get('apache/vhosts/{}/private_root'.format(vhost_name), None):
             vhosts[vhost_name]['private_root'] = '/var/www/{}'.format(vhost_name)
         if not metadata.get('apache/vhosts/{}/public_root'.format(vhost_name), None):
-            vhosts[vhost_name]['public_root'] = '/var/www/{}/htdocs'.format(vhost_name)
+            vhosts[vhost_name]['public_root'] = '/var/www/{}/{}'.format(vhost_name, metadata.get('apache/vhosts/{}/htdocs'.format(vhost_name), 'htdocs'))
 
         if 'suexec' in vhost:
             old_document_root = vhost.get('document_root', '/var/www/{}'.format(vhost['suexec']['user']))
