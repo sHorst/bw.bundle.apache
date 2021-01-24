@@ -203,110 +203,67 @@ def add_check_mk_tags(metadata):
 
 @metadata_reactor
 def add_check_mk_test(metadata):
-    # TODO: fix this
-    raise DoNotRunAgain
-
     if not node.has_bundle('check_mk_agent'):
         raise DoNotRunAgain
 
-    if not metadata.get('check_mk/servers', []):
-        return {}
+    active_checks = {
+        'http': [],
+    }
+    for port, protocoll in get_used_ports(metadata).items():
+        tag = get_tag_from_port(port, protocoll)
+        condition = {'host_tags': {tag: tag}}
 
-    ports = get_used_ports(metadata)
-    # tag = 'ssh{}'.format(metadata.get('openssl', {}).get('port', ''))
-    # port = metadata.get('openssl', {}).get('port', 22)
+        if protocoll == 'http':
+            config = (u'Webserver', {'virthost': ('$HOSTNAME$', False)})
+            description = 'HTTP Server'
+            if port != 80:
+                # tag = 'http{port}'.format(port=port)
+                # TODO: add port to config
+                description += ' on Port {}'.format(port)
 
-    for check_mk_server_name in metadata.get('check_mk/servers'):
-        check_mk_server = repo.get_node(check_mk_server_name)
+            active_checks['http'] += [
+                {
+                    'id': f'{tag}_connect',
+                    'condition': condition,
+                    'options': {'description': description},
+                    'value': config,
+                },
+            ]
 
-        if check_mk_server.partial_metadata == {}:
-            return {}
+        elif protocoll == 'https':
+            # TODO: add all vhosts to config
+            config = ('Secure Web Server', {
+                'ssl': 'auto',
+                'virthost': ('$HOSTNAME$', False),
+                'sni': True
+            })
+            cert_config = (u'cert Age', {'cert_days': (15, 5), 'sni': True})
+            description = 'Secure HTTP Server'
+            if port != 443:
+                # TODO: add port to config
+                description += ' on Port {}'.format(port)
 
-        check_mk_server.partial_metadata. \
-            setdefault('check_mk', {}). \
-            setdefault('global_rules', {}). \
-            setdefault('active_checks', {}). \
-            setdefault('http', [])
+            active_checks['http'] += [
+                {
+                    'id': f'{tag}_connect',
+                    'condition': condition,
+                    'options': {'description': description},
+                    'value': config,
+                },
+                {
+                    'id': f'{tag}_cert',
+                    'condition': condition,
+                    'options': {'description': "Certificate Age for {}".format(description)},
+                    'value': cert_config,
+                },
+            ]
 
-        used_tags = [
-            # TODO: this is not working to full extend
-            list(x.get('condition', {}).get('host_tags', {}).keys()) for x in check_mk_server.partial_metadata['check_mk']['global_rules']['active_checks']['http']
-        ]
+    return {
+        'check_mk': {
+            'agent': {
+                'active_checks': active_checks,
+            }
+        },
+    }
 
-        for port, protocoll in ports.items():
-            tag = get_tag_from_port(port, protocoll)
-
-            if [tag, ] not in used_tags:
-                condition = {'host_tags': {tag: tag}}
-
-                if protocoll == 'http':
-                    config = (u'Webserver', {'virthost': ('$HOSTNAME$', False)})
-                    description = 'HTTP Server'
-                    if port != 80:
-                        # tag = 'http{port}'.format(port=port)
-                        # TODO: add port to config
-                        description += ' on Port {}'.format(port)
-
-                    check_mk_server.partial_metadata['check_mk']['global_rules']['active_checks']['http'] += [
-                        {
-                            'condition': condition,
-                            'options': {'description': description},
-                            'value': config,
-                        },
-                    ]
-                elif protocoll == 'https':
-                    # TODO: add all vhosts to config
-                    config = ('Secure Web Server', {
-                        'ssl': 'auto',
-                        'virthost': ('$HOSTNAME$', False),
-                        'sni': True
-                    })
-                    cert_config = (u'cert Age', {'cert_days': (15, 5), 'sni': True})
-                    description = 'Secure HTTP Server'
-                    if port != 443:
-                        # TODO: add port to config
-                        description += ' on Port {}'.format(port)
-
-                    check_mk_server.partial_metadata['check_mk']['global_rules']['active_checks']['http'] += [
-                        {
-                            'condition': condition,
-                            'options': {'description': description},
-                            'value': config,
-                        },
-                    ]
-
-                    check_mk_server.partial_metadata['check_mk']['global_rules']['active_checks']['http'] += [
-                        {
-                            'condition': condition,
-                            'options': {'description': "Certificate Age for {}".format(description)},
-                            'value': cert_config,
-                        },
-                    ]
-
-        # generate global host tags for ssh
-        # check_mk_server.partial_metadata. \
-        #     setdefault('check_mk', {}). \
-        #     setdefault('host_tags', {}). \
-        #     setdefault('ssh', {
-        #     'description': 'Services/SSH Server',
-        #     'subtags': {
-        #         'None': ('Nein', []),
-        #         'ssh': ('Ja', []),
-        #     }
-        # })
-        #
-        # if tag not in check_mk_server.partial_metadata['check_mk']['host_tags']['ssh']['subtags']:
-        #     check_mk_server.partial_metadata['check_mk']['host_tags']['ssh']['subtags'][tag] = (
-        #         'Ja auf Port {}'.format(port), ['ssh', ]
-        #     )
-        #
-        # # SSH Server host_group
-        # check_mk_server.partial_metadata. \
-        #     setdefault('check_mk', {}). \
-        #     setdefault('host_groups', {})
-        #
-        # check_mk_server.partial_metadata['check_mk']['host_groups']['ssh-servers'] = {
-        #     'description': 'SSH Server',
-        #     'tags': ['ssh'],
-        # }
 
