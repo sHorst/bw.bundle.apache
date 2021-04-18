@@ -1,3 +1,5 @@
+from uuid import uuid5, NAMESPACE_URL
+
 defaults = {}
 
 if node.has_bundle("dehydrated"):
@@ -214,7 +216,9 @@ def add_check_mk_test(metadata):
         condition = {'host_tags': {tag: tag}}
 
         if protocoll == 'http':
-            config = (u'Webserver', {'virthost': ('$HOSTNAME$', False)})
+            config = {'host': {'virthost': '$HOSTNAME$'},
+                      'mode': ('url', {}),
+                      'name': 'Webserver'}
             description = 'HTTP Server'
             if port != 80:
                 # tag = 'http{port}'.format(port=port)
@@ -223,7 +227,7 @@ def add_check_mk_test(metadata):
 
             active_checks['http'] += [
                 {
-                    'id': f'{tag}_connect',
+                    'id': str(uuid5(NAMESPACE_URL, f'{tag}_connect')),
                     'condition': condition,
                     'options': {'description': description},
                     'value': config,
@@ -232,12 +236,12 @@ def add_check_mk_test(metadata):
 
         elif protocoll == 'https':
             # TODO: add all vhosts to config
-            config = ('Secure Web Server', {
-                'ssl': 'auto',
-                'virthost': ('$HOSTNAME$', False),
-                'sni': True
-            })
-            cert_config = (u'cert Age', {'cert_days': (15, 5), 'sni': True})
+            config = {'host': {'virthost': '$HOSTNAME$'},
+                      'mode': ('url', {'ssl': 'auto'}),
+                      'name': 'Secure Web Server'}
+            cert_config = {'host': {},
+                           'mode': ('cert', {'cert_days': (15, 5)}),
+                           'name': 'cert Age'}
             description = 'Secure HTTP Server'
             if port != 443:
                 # TODO: add port to config
@@ -245,13 +249,13 @@ def add_check_mk_test(metadata):
 
             active_checks['http'] += [
                 {
-                    'id': f'{tag}_connect',
+                    'id': str(uuid5(NAMESPACE_URL, f'{tag}_connect')),
                     'condition': condition,
                     'options': {'description': description},
                     'value': config,
                 },
                 {
-                    'id': f'{tag}_cert',
+                    'id': str(uuid5(NAMESPACE_URL, f'{tag}_cert')),
                     'condition': condition,
                     'options': {'description': "Certificate Age for {}".format(description)},
                     'value': cert_config,
