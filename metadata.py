@@ -37,6 +37,15 @@ def get_tag_from_port(port, protocoll):
 
 @metadata_reactor
 def default_vhost_for_redirects(metadata):
+    default_hostname = ''
+    for vhost_name, vhost in metadata.get('apache/vhosts', {}).items():
+        if vhost.get('default', False):
+            default_hostname = vhost_name
+            break
+
+    if default_hostname == '':
+        default_hostname = metadata.get('apache/vhosts', {}).keys()
+
     vhosts = {}
     for redirect_from, redirect_to in metadata.get('apache/url_redirects', {}).items():
         vhosts[redirect_from] = \
@@ -44,7 +53,7 @@ def default_vhost_for_redirects(metadata):
                 'enabled': True,
                 'ssl': True,
                 'permanent_redirects': {
-                    '/.well-known/acme-challenge': 'https://www.scoutnet.de/.well-known/acme-challenge',
+                    '/.well-known/acme-challenge': f'https://{default_hostname}/.well-known/acme-challenge',
                     '/': redirect_to,
                 }
             }
@@ -66,7 +75,7 @@ def default_vhost_document_root(metadata):
         if not metadata.get('apache/vhosts/{}/public_root'.format(vhost_name), None):
             vhosts[vhost_name]['public_root'] = '/var/www/{}/{}'.format(vhost_name, metadata.get('apache/vhosts/{}/htdocs'.format(vhost_name), 'htdocs'))
 
-        if 'suexec' in vhost:
+        if 'suexec' in vhost and 'public_root' not in vhost:
             old_document_root = vhost.get('document_root', '/var/www/{}'.format(vhost['suexec']['user']))
             vhosts[vhost_name]['private_root'] = '{}/web/htdocs'.format(old_document_root)
             vhosts[vhost_name]['public_root'] = '{}/web/htdocs/public_html'.format(old_document_root)
