@@ -114,12 +114,12 @@ def add_restic_rules(metadata):
     if not node.has_bundle("restic"):
         raise DoNotRunAgain
 
-    add_folders = ['/var/www', ]
+    add_folders = {'/var/www', }
 
     # backup /var/www and additional all document roots which are not part of /var/www
     for vhost_name, vhost in metadata.get('apache/vhosts', {}).items():
         if not vhost.get('document_root', '/var/www').startswith('/var/www'):
-            add_folders += [vhost.get('document_root'), ]
+            add_folders.add(vhost.get('document_root'))
 
     return {
         'restic': {
