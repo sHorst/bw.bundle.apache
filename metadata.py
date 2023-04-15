@@ -133,10 +133,10 @@ def add_dehydrated_domains(metadata):
     if not node.has_bundle("dehydrated"):
         raise DoNotRunAgain
 
-    domains = []
+    domains = set()
     for vhost_name, vhost in metadata.get('apache/vhosts', {}).items():
         if vhost.get('enabled', False) and vhost.get('ssl', False):
-            domains.append('{} {}'.format(vhost_name, ' '.join(vhost.get('aliases', []))).strip())
+            domains.add('{} {}'.format(vhost_name, ' '.join(vhost.get('aliases', []))).strip())
 
     return {
         'dehydrated': {
