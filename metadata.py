@@ -226,7 +226,10 @@ def add_check_mk_test(metadata):
 
         if protocoll == 'http':
             config = {'host': {'virthost': '$HOSTNAME$'},
-                      'mode': ('url', {}),
+                      'mode': ('url', {
+                          'extended_perfdata': True,
+                          'urlize': True,
+                          }),
                       'name': 'Webserver'}
             description = 'HTTP Server'
             if port != 80:
@@ -238,15 +241,21 @@ def add_check_mk_test(metadata):
                 {
                     'id': str(uuid5(NAMESPACE_URL, f'{tag}_connect')),
                     'condition': condition,
-                    'options': {'description': description},
+                    'options': {'description': description, 'disabled': False},
                     'value': config,
                 },
             ]
 
         elif protocoll == 'https':
             # TODO: add all vhosts to config
+            # TODO: check for TLS 1.2
             config = {'host': {'virthost': '$HOSTNAME$'},
-                      'mode': ('url', {'ssl': 'auto'}),
+                      'mode': ('url', {
+                          'ssl': 'auto',
+                          'extended_perfdata': True,
+                          #'ssl': '1.2',
+                          'urlize': True,
+                          }),
                       'name': 'Secure Web Server'}
             cert_config = {'host': {},
                            'mode': ('cert', {'cert_days': (15, 5)}),
@@ -260,13 +269,13 @@ def add_check_mk_test(metadata):
                 {
                     'id': str(uuid5(NAMESPACE_URL, f'{tag}_connect')),
                     'condition': condition,
-                    'options': {'description': description},
+                    'options': {'description': description, 'disabled': False},
                     'value': config,
                 },
                 {
                     'id': str(uuid5(NAMESPACE_URL, f'{tag}_cert')),
                     'condition': condition,
-                    'options': {'description': "Certificate Age for {}".format(description)},
+                    'options': {'description': "Certificate Age for {}".format(description), 'disabled': False},
                     'value': cert_config,
                 },
             ]
