@@ -258,7 +258,10 @@ def add_check_mk_test(metadata):
                           }),
                       'name': 'Secure Web Server'}
             cert_config = {'host': {},
-                           'mode': ('cert', {'cert_days': (15, 5)}),
+                           # 'mode': ('cert', {'cert_days': (15, 5)}),
+                           'mode': ('cert', {
+                               'cert_days': ('fixed', ('%#%FLOAT(1296000.0)%#%', '%#%FLOAT(432000.0)%#%'))
+                           }),
                            'name': 'cert Age'}
             description = 'Secure HTTP Server'
             if port != 443:
