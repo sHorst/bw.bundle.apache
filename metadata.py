@@ -136,7 +136,7 @@ def add_dehydrated_domains(metadata):
     domains = {}
     for vhost_name, vhost in metadata.get('apache/vhosts', {}).items():
         if vhost.get('enabled', False) and vhost.get('ssl', False):
-            challenge_type = vhost.get('dehydrated_challenge_type', 'http-01')
+            challenge_type = vhost.get('dehydrated_challenge_type', metadata.get('dehydrated/challenge_type', 'http-01'))
 
             domains.setdefault(challenge_type, set())
             domains[challenge_type].add('{} {}'.format(vhost_name, ' '.join(vhost.get('aliases', []))).strip())
